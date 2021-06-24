@@ -4,51 +4,88 @@ import bcrypt from 'bcrypt';
 import { v4 as uuid } from 'uuid';
 import connection from './database/database.js';
 import dayjs from 'dayjs';
+import joi from 'joi';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+
+const schema = joi.object({
+    name: joi.string().min(2),
+    email: joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }),
+    password: joi.string().min(1),
+    positiveValue: joi.number().positive().integer(),
+    negativeValue: joi.number().negative().integer(),
+    description: joi.string(),
+    date: joi.date().iso(),
+    token: joi.string().min(10)
+}).unknown(true);
+
 app.post("/signup", async (req, res) => {
     const { name, email, password } = req.body;
     const hash = bcrypt.hashSync(password, 10);
 
-    try {
-        await connection.query(`
-        INSERT INTO users (name, email, password)
-        VALUES ($1, $2, $3)`, [name, email, hash]);
+    const validInput = schema.validate({ name, email, password });
+    console.log(validInput)
+    if (!validInput.error) {
+        try {
+            const existingEmail = await connection.query(`SELECT email FROM users WHERE email = $1`, [email]);
 
-        res.sendStatus(201);
+            if (existingEmail.rows.length === 0) {
+                await connection.query(`
+                    INSERT INTO users (name, email, password)
+                    VALUES ($1, $2, $3)`, [name, email, hash]);
 
-    } catch (err) {
-        console.log(err);
-        res.sendStatus(500);
+                return res.sendStatus(201);
+            } else {
+                return res.sendStatus(409);
+            }
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500);
+        }
+    } else {
+        return res.sendStatus(400);
     }
 });
 
 app.post("/", async (req, res) => {
-    try {
-        const { email, password } = req.body;
+    const { email, password } = req.body;
+    const validInput = schema.validate({ email, password });
+        
+    if (!validInput.error) {
+        try {
+            const result = await connection.query(`
+                SELECT * FROM users WHERE email = $1
+            `, [email]);
 
-        const result = await connection.query(`
-            SELECT * FROM users WHERE email = $1
-        `, [email]);
+            if (email) {
+                const user = result.rows[0];
 
-        const user = result.rows[0];
+                if (user && bcrypt.compareSync(password, user.password)) {
+                    const token = uuid();
+                    const validToken = schema.validate({token});
+                    if(validToken.error) return res.sendStatus(400);
 
-        if (user && bcrypt.compareSync(password, user.password)) {
-            const token = uuid();
+                    await connection.query(`INSERT INTO sessions ("idUser", token) VALUES ($1, $2)`, [user.id, token])
+                    res.send(token);
+                } else {
+                    res.sendStatus(401);
+                }
 
-            await connection.query(`INSERT INTO sessions ("idUser", token) VALUES ($1, $2)`, [user.id, token])
-            res.send(token);
-        } else {
-            res.sendStatus(401);
+            } else {
+                return res.sendStatus(409)
+            }
+
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500);
         }
-
-    } catch (err) {
-        console.log(err);
-        res.sendStatus(500);
+    } else {
+        return res.sendStatus(400);
     }
+
 });
 
 app.get("/home", async (req, res) => {
@@ -70,14 +107,19 @@ app.get("/home", async (req, res) => {
 
         const user = await connection.query(`SELECT id, name, email FROM users WHERE id = $1`, [result.rows[0].idUser]);
 
-        const userAndRegisters = {
+        const userAndRegisters = [{
             user: {
                 idUser: user.rows[0].id,
                 name: user.rows[0].name,
-                email: user.rows[0].email
+                email: user.rows[0].email,
+                token: result.rows[0].token
             },
             registers: result.rows
-        }
+        }]
+
+        userAndRegisters[0].registers.map(r => {
+            delete r.token ;
+        })
 
         res.send(userAndRegisters);
 
@@ -91,29 +133,69 @@ app.post("/cashin", async (req, res) => {
 
     const authorization = req.header("authorization");
     const token = authorization?.replace("Bearer ", "");
-
+    const { value, description } = req.body;
+    const date = dayjs().format("YYYY-MM-DD");
+    
     if (!token) return res.sendStatus(401);
 
-    const date = dayjs();
+    const validInput = schema.validate({ positiveValue: value, description, date, token});
 
-    try{
-        const { value, description } = req.body;
+    if(!validInput.error){
+        try {
+            const result = await connection.query(`SELECT "idUser" FROM sessions WHERE token = $1`, [token]);
+    
+            const id = result.rows[0].idUser
+    
+            const cashin = await connection.query(`
+            INSERT INTO registers
+            ("idUser", value, description, date, cashin, cashout) 
+            VALUES ($1, $2, $3, $4, true, false)
+            `, [id, value, description, date])
+    
+            res.sendStatus(201);
+    
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500);
+        }
 
-        const result = await connection.query(`SELECT "idUser" FROM sessions WHERE token = $1`, [token]);
+    } else {
+        return res.sendStatus(400);
+    }
+});
 
-        const id = result.rows[0].idUser
+app.post("/cashout", async (req, res) => {
 
-        const cashin = await connection.query(`
-        INSERT INTO registers
-        ("idUser", value, description, date, cashin, cashout) 
-        VALUES ($1, $2, $3, $4, true, false)
-        `, [id,value, description, date ])
+    const authorization = req.header("authorization");
+    const token = authorization?.replace("Bearer ", "");
+    const { value, description } = req.body;
+    const date = dayjs().format("YYYY-MM-DD");
+    
+    if (!token) return res.sendStatus(401);
 
-        res.sendStatus(201);
+    const validInput = schema.validate({ negativeValue: value, description, date, token});
 
-    } catch(err) {
-        console.log(err);
-        res.sendStatus(500);
+    if(!validInput.error){
+        try {
+            const result = await connection.query(`SELECT "idUser" FROM sessions WHERE token = $1`, [token]);
+    
+            const id = result.rows[0].idUser
+    
+            const cashin = await connection.query(`
+            INSERT INTO registers
+            ("idUser", value, description, date, cashin, cashout) 
+            VALUES ($1, $2, $3, $4, false, true)
+            `, [id, value, description, date])
+    
+            res.sendStatus(201);
+    
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500);
+        }
+
+    } else {
+        return res.sendStatus(400);
     }
 });
 
