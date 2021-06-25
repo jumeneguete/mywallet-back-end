@@ -53,7 +53,7 @@ app.post("/signup", async (req, res) => {
 app.post("/", async (req, res) => {
     const { email, password } = req.body;
     const validInput = schema.validate({ email, password });
-        
+
     if (!validInput.error) {
         try {
             const result = await connection.query(`
@@ -65,8 +65,8 @@ app.post("/", async (req, res) => {
 
                 if (user && bcrypt.compareSync(password, user.password)) {
                     const token = uuid();
-                    const validToken = schema.validate({token});
-                    if(validToken.error) return res.sendStatus(400);
+                    const validToken = schema.validate({ token });
+                    if (validToken.error) return res.sendStatus(400);
 
                     await connection.query(`INSERT INTO sessions ("idUser", token) VALUES ($1, $2)`, [user.id, token])
                     res.send(token);
@@ -95,7 +95,6 @@ app.get("/home", async (req, res) => {
 
     if (!token) return res.sendStatus(401);
 
-
     try {
         const result = await connection.query(`
         SELECT *
@@ -118,7 +117,8 @@ app.get("/home", async (req, res) => {
         }]
 
         userAndRegisters[0].registers.map(r => {
-            delete r.token ;
+            delete r.token;
+            delete r.id;
         })
 
         res.send(userAndRegisters);
@@ -135,25 +135,25 @@ app.post("/cashin", async (req, res) => {
     const token = authorization?.replace("Bearer ", "");
     const { value, description } = req.body;
     const date = dayjs().format("YYYY-MM-DD");
-    
+
     if (!token) return res.sendStatus(401);
 
-    const validInput = schema.validate({ positiveValue: value, description, date, token});
+    const validInput = schema.validate({ positiveValue: value, description, date, token });
 
-    if(!validInput.error){
+    if (!validInput.error) {
         try {
             const result = await connection.query(`SELECT "idUser" FROM sessions WHERE token = $1`, [token]);
-    
+
             const id = result.rows[0].idUser
-    
+
             const cashin = await connection.query(`
             INSERT INTO registers
             ("idUser", value, description, date, cashin, cashout) 
             VALUES ($1, $2, $3, $4, true, false)
             `, [id, value, description, date])
-    
+
             res.sendStatus(201);
-    
+
         } catch (err) {
             console.log(err);
             res.sendStatus(500);
@@ -170,25 +170,25 @@ app.post("/cashout", async (req, res) => {
     const token = authorization?.replace("Bearer ", "");
     const { value, description } = req.body;
     const date = dayjs().format("YYYY-MM-DD");
-    
+
     if (!token) return res.sendStatus(401);
 
-    const validInput = schema.validate({ negativeValue: value, description, date, token});
+    const validInput = schema.validate({ negativeValue: value, description, date, token });
 
-    if(!validInput.error){
+    if (!validInput.error) {
         try {
             const result = await connection.query(`SELECT "idUser" FROM sessions WHERE token = $1`, [token]);
-    
+
             const id = result.rows[0].idUser
-    
+
             const cashin = await connection.query(`
             INSERT INTO registers
             ("idUser", value, description, date, cashin, cashout) 
             VALUES ($1, $2, $3, $4, false, true)
             `, [id, value, description, date])
-    
+
             res.sendStatus(201);
-    
+
         } catch (err) {
             console.log(err);
             res.sendStatus(500);
@@ -199,8 +199,21 @@ app.post("/cashout", async (req, res) => {
     }
 });
 
-app.get("/banana", (req, res) => {
-    res.sendStatus(200);
+app.post("/logout", async (req, res) => {
+    const authorization = req.header("authorization");
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) return res.sendStatus(401);
+    try {
+        const existingToken = await connection.query(`SELECT token from sessions where token = $1`, [token])
+        if( existingToken.rows.length === 0) return res.sendStatus(404);
+        await connection.query(`DELETE FROM sessions WHERE token = $1`, [token]);
+        res.sendStatus(200);
+
+    } catch (err) {
+        console.log(err);
+        res.sendStatus(500);
+    }
 })
 
 export default app;
