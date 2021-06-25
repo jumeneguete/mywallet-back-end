@@ -12,9 +12,9 @@ app.use(express.json());
 
 
 const schema = joi.object({
-    name: joi.string().min(2),
+    name: joi.string().min(3).replace(" ", ""),
     email: joi.string().email({ minDomainSegments: 2, tlds: { allow: ['com', 'net'] } }),
-    password: joi.string().min(1),
+    password: joi.string().min(1).replace(" ", ""),
     positiveValue: joi.number().positive().integer(),
     negativeValue: joi.number().negative().integer(),
     description: joi.string(),
@@ -27,7 +27,7 @@ app.post("/signup", async (req, res) => {
     const hash = bcrypt.hashSync(password, 10);
 
     const validInput = schema.validate({ name, email, password });
-    console.log(validInput)
+
     if (!validInput.error) {
         try {
             const existingEmail = await connection.query(`SELECT email FROM users WHERE email = $1`, [email]);
@@ -60,22 +60,17 @@ app.post("/", async (req, res) => {
                 SELECT * FROM users WHERE email = $1
             `, [email]);
 
-            if (email) {
-                const user = result.rows[0];
+            const user = result.rows[0];
 
-                if (user && bcrypt.compareSync(password, user.password)) {
-                    const token = uuid();
-                    const validToken = schema.validate({ token });
-                    if (validToken.error) return res.sendStatus(400);
+            if (user && bcrypt.compareSync(password, user.password)) {
+                const token = uuid();
+                const validToken = schema.validate({ token });
+                if (validToken.error) return res.sendStatus(400);
 
-                    await connection.query(`INSERT INTO sessions ("idUser", token) VALUES ($1, $2)`, [user.id, token])
-                    res.send(token);
-                } else {
-                    res.sendStatus(401);
-                }
-
+                await connection.query(`INSERT INTO sessions ("idUser", token) VALUES ($1, $2)`, [user.id, token]);
+                res.send(token);
             } else {
-                return res.sendStatus(409)
+                res.sendStatus(401);
             }
 
         } catch (err) {
@@ -206,7 +201,7 @@ app.post("/logout", async (req, res) => {
     if (!token) return res.sendStatus(401);
     try {
         const existingToken = await connection.query(`SELECT token from sessions where token = $1`, [token])
-        if( existingToken.rows.length === 0) return res.sendStatus(404);
+        if (existingToken.rows.length === 0) return res.sendStatus(404);
         await connection.query(`DELETE FROM sessions WHERE token = $1`, [token]);
         res.sendStatus(200);
 
