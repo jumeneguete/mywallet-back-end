@@ -123,6 +123,28 @@ app.get("/home", async (req, res) => {
     }
 });
 
+app.get("/register/:id", async (req, res) => {
+
+    const authorization = req.header("authorization");
+    const token = authorization?.replace("Bearer ", "");
+    const { id } = req.params;
+
+    if (!token) return res.sendStatus(401);
+
+    try {
+        const existingRegister = await connection.query(`SELECT * FROM registers WHERE id = $1`, [id]);
+        if (existingRegister.rows.length === 0) {
+            return res.sendStatus(404);
+        }
+
+        res.send(existingRegister.rows);
+
+    } catch (err) {
+        console.log(err);
+        res.sendStatus(500);
+    }
+});
+
 app.post("/cashin", async (req, res) => {
 
     const authorization = req.header("authorization");
