@@ -92,7 +92,7 @@ app.get("/home", async (req, res) => {
 
     try {
         const result = await connection.query(`
-        SELECT *
+        SELECT r.*
         FROM registers r
         JOIN sessions s
         ON s."idUser" = r."idUser"
@@ -113,7 +113,6 @@ app.get("/home", async (req, res) => {
 
         userAndRegisters[0].registers.map(r => {
             delete r.token;
-            delete r.id;
         })
 
         res.send(userAndRegisters);
@@ -146,6 +145,43 @@ app.post("/cashin", async (req, res) => {
             ("idUser", value, description, date, cashin, cashout) 
             VALUES ($1, $2, $3, $4, true, false)
             `, [id, value, description, date])
+
+            res.sendStatus(201);
+
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500);
+        }
+
+    } else {
+        return res.sendStatus(400);
+    }
+});
+
+app.post("/updatecashin/:id", async (req, res) => {
+    const authorization = req.header("authorization");
+    const token = authorization?.replace("Bearer ", "");
+    const { value, description } = req.body;
+    const { id } = req.params;
+    const date = dayjs().format("YYYY-MM-DD");
+
+    if (!token) return res.sendStatus(401);
+
+    const validInput = schema.validate({ positiveValue: value, description, date, token });
+    console.log(validInput)
+
+    if (!validInput.error) {
+        try {
+            const existingRegister = await connection.query(`SELECT * FROM registers WHERE id = $1`, [id]);
+            if (existingRegister.rows.length === 0) {
+                return res.sendStatus(404);
+            }
+
+            await connection.query(`
+            UPDATE registers
+            SET value = $1, description = $2, date = $3
+            WHERE id = $4
+            `, [value, description, date, id])
 
             res.sendStatus(201);
 
@@ -193,6 +229,69 @@ app.post("/cashout", async (req, res) => {
         return res.sendStatus(400);
     }
 });
+
+app.post("/updatecashout/:id", async (req, res) => {
+    const authorization = req.header("authorization");
+    const token = authorization?.replace("Bearer ", "");
+    const { value, description } = req.body;
+    const { id } = req.params;
+    const date = dayjs().format("YYYY-MM-DD");
+
+    if (!token) return res.sendStatus(401);
+
+    const validInput = schema.validate({ negativeValue: value, description, date, token });
+    console.log(validInput)
+
+    if (!validInput.error) {
+        try {
+            const existingRegister = await connection.query(`SELECT * FROM registers WHERE id = $1`, [id]);
+            if (existingRegister.rows.length === 0) {
+                return res.sendStatus(404);
+            }
+
+            await connection.query(`
+            UPDATE registers
+            SET value = $1, description = $2, date = $3
+            WHERE id = $4
+            `, [value, description, date, id])
+
+            res.sendStatus(201);
+
+        } catch (err) {
+            console.log(err);
+            res.sendStatus(500);
+        }
+
+    } else {
+        return res.sendStatus(400);
+    }
+});
+
+
+app.delete('/delete/:id', async (req, res) => {
+    const authorization = req.header("authorization");
+    const token = authorization?.replace("Bearer ", "");
+    const { id } = req.params;
+
+    if (!token) return res.sendStatus(401);
+
+
+    try {
+        const existingRegister = await connection.query(`SELECT * FROM registers WHERE id = $1`, [id]);
+        if (existingRegister.rows.length === 0) {
+            return res.sendStatus(404);
+        }
+
+        await connection.query('DELETE FROM registers WHERE id = $1', [id])
+        res.sendStatus(200)
+
+    } catch (err) {
+        console.log(err);
+        res.sendStatus(500);
+
+    }
+});
+
 
 app.post("/logout", async (req, res) => {
     const authorization = req.header("authorization");

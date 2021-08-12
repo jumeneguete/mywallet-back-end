@@ -6,6 +6,8 @@ beforeEach(async ()=> {
     await connection.query('DELETE FROM users')
 });
 
+afterAll(()=> connection.end());
+
 describe("POST /signup", () => {
     it("returns status 201 for valid values received via body", async () => {
         const body = { name: 'Test', email: 'email@email.com', password: 'test'};
