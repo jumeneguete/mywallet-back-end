@@ -13,18 +13,18 @@ You can find this front-end application at https://github.com/jumeneguete/mywall
 
 This is an web application where people can add their incomes and expenses and keep it on track. Below are the implemented features:
 
-- Sign Up (/signup);
-- Sign In (/signin);
+- Sign Up ***(/signup)***;
+- Sign In ***(/signin)***;
 
   Authenticated routes: 
-- Get all existent income or outcome registers (/registers);
-- Get an specific income or outcome register (/registers/:id);
-- Add new income (/cashin);
-- Edit an specific registered income (/updatecashin/:id);
-- Add new outcome (/cashout);
-- Edit an specific registered outcome (/updatecashout/:id);
-- Delete a register (/delete/:id);
-- Logout (/logout);
+- Get all existent income or outcome registers ***(/registers)***;
+- Get an specific income or outcome register ***(/registers/:id)***;
+- Add new income ***(/cashin)***;
+- Edit an specific registered income ***(/updatecashin/:id)***;
+- Add new outcome ***(/cashout)***;
+- Edit an specific registered outcome ***(/updatecashout/:id)***;
+- Delete a register ***(/delete/:id)***;
+- Logout ***(/logout)***;
 
 
 ### 🔹🔹Technologies
