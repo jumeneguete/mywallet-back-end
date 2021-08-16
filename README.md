@@ -7,7 +7,7 @@ It is an easy and simple way to organise finances with no stress!
 <p align="center"><img width="400px" src="/assets/my_wallet.gif" /></p>
 
 
-You can find the front-end application at https://github.com/jumeneguete/mywallet-front-end
+You can find this front-end application at https://github.com/jumeneguete/mywallet-front-end
 
 ### 🔹🔹About
 
@@ -37,7 +37,7 @@ This is an web application where people can add their incomes and expenses and k
 - <a href="https://www.npmjs.com/package/uuid" target="_blank">uuid</a>
 - <a href="https://www.npmjs.com/package/dayjs" target="_blank">Dayjs</a>
 - <a href="https://www.npmjs.com/package/joi" target="_blank">Joi</a>
-- Front-end at https://github.com/jumeneguete/mywallet-front-end
+- Front-end using ReactJS at https://github.com/jumeneguete/mywallet-front-end
 
 ### 🔹🔹Disclaimer
 
