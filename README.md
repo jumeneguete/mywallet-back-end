@@ -16,7 +16,7 @@ This is an web application where people can add their incomes and expenses and k
 - Sign Up (/signup);
 - Sign In (/signin);
 
-  AUTHENTICATED ROUTES: 
+  Authenticated routes: 
 - Get all existent income or outcome registers (/registers);
 - Get an specific income or outcome register (/registers/:id);
 - Add new income (/cashin);
@@ -41,8 +41,8 @@ This is an web application where people can add their incomes and expenses and k
 
 ### 🔹🔹Disclaimer
 
-On this project I was training NodeJS, Express and database PostgresSQL without any appliance of clean architecture and it was my first time trainning integration tests.
-Later on I appplied some clean arquitecture fetures using controllers, services and repositories, and also using middleware to the authenticated routes.
+On this project I was training NodeJS, Express and database PostgresSQL without any appliance of clean architecture and it was my first time trainning integration tests. <br>
+Later on I appplied some clean arquitecture fetures using controllers, services and repositories, and also using middleware to the authenticated routes. <br>
 → Soon I intend to implement integration tests to all routes.
 
 ### 🔹🔹How to run
@@ -59,4 +59,4 @@ npm i
 ```bash
 npm run dev
 ```
-7. Congrats! App is runnig and you can test it using some API Client or together with the front-end applications.
+7. Congrats! App is runnig and you can test it using some API Client or together with the <a href="https://github.com/jumeneguete/mywallet-front-end" target="_blank">front-end application</a>.
